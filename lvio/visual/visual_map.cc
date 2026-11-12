@@ -104,6 +104,7 @@ void VisualMap::removeKeyFrame(VisualFrame::Ptr &frame, bool is_remove_mappoint)
             }
         }
         frame->clearFeatures();
+        frame->releaseImage();
     }
 
     // 移除关键帧

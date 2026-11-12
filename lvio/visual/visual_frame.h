@@ -80,6 +80,9 @@ public:
     void clearFeatures() {
         features_.clear();
         unupdated_mappoints_.clear();
+    }
+
+    void releaseImage() {
         image_.release();
         raw_image_.release();
     }
