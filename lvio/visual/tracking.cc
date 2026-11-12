@@ -50,13 +50,15 @@ Tracking::Tracking(Camera::Ptr camera, VisualMap::Ptr map, VisualDrawer::Ptr dra
     is_use_visualization_   = config["is_use_visualization"].as<bool>();
     reprojection_error_std_ = config["optimizer"]["optimize_reprojection_std"].as<double>();
 
-    // 直方图均衡化
-    clahe_ = cv::cuda::createCLAHE(3.0, cv::Size(21, 21));
-
     // 特征提取
     // 提取特征数量平方面积为总面积的 2/3
     track_min_pixel_distance_ =
         static_cast<int>(round(sqrt(camera_->width() * camera_->height()) / sqrt(track_max_features_ * 1.5)));
+
+#ifdef PA_LVIO_HAVE_OPENCV_CUDA
+    // 直方图均衡化
+    clahe_ = cv::cuda::createCLAHE(3.0, cv::Size(21, 21));
+
     corners_detector_ =
         cv::cuda::createGoodFeaturesToTrackDetector(CV_8UC1, 200, 0.01, track_min_pixel_distance_);
 
@@ -66,6 +68,10 @@ Tracking::Tracking(Camera::Ptr camera, VisualMap::Ptr map, VisualDrawer::Ptr dra
         cv::cuda::SparsePyrLKOpticalFlow::create(cv::Size(21, 21), 1, TRACK_MAX_ITERATION, is_initial_flow);
     optical_flow_ref_ =
         cv::cuda::SparsePyrLKOpticalFlow::create(cv::Size(21, 21), 3, TRACK_MAX_ITERATION, is_initial_flow);
+#else
+    // 直方图均衡化
+    clahe_ = cv::createCLAHE(3.0, cv::Size(21, 21));
+#endif
 
     frame_ref_ = nullptr;
     frame_cur_ = nullptr;
@@ -79,6 +85,7 @@ bool Tracking::preprocessing(VisualFrame::Ptr frame) {
     frame_pre_ = frame_cur_;
     frame_cur_ = frame;
 
+#ifdef PA_LVIO_HAVE_OPENCV_CUDA
     // 需要硬拷贝
     image_cur_gpu_.copyTo(image_pre_gpu_);
     image_cur_gpu_.upload(frame_cur_->image());
@@ -88,6 +95,10 @@ bool Tracking::preprocessing(VisualFrame::Ptr frame) {
 
     // 拷贝到图像用于特征提取和可视化
     image_cur_gpu_.download(frame_cur_->image());
+#else
+    // 直方图均衡化
+    clahe_->apply(frame_cur_->image(), frame_cur_->image());
+#endif
 
     return true;
 }
@@ -686,6 +697,7 @@ bool Tracking::trackMappoint() {
     vector<float> error;
     vector<cv::Point2f> pts2d_reverse = pts2d_map;
 
+#ifdef PA_LVIO_HAVE_OPENCV_CUDA
     cv::cuda::GpuMat pts2d_reverse_gpu(pts2d_reverse), pts2d_matched_gpu(pts2d_matched);
     cv::cuda::GpuMat status_gpu, status_reverse_gpu;
 
@@ -696,17 +708,19 @@ bool Tracking::trackMappoint() {
     pts2d_matched_gpu.download(pts2d_matched);
     status_gpu.download(status);
     status_reverse_gpu.download(status_reverse);
-
-    // // 正向光流
-    // cv::calcOpticalFlowPyrLK(frame_pre_->image(), frame_cur_->image(), pts2d_map, pts2d_matched, status, error,
-    //                          cv::Size(21, 21), TRACK_PYRAMID_LEVEL,
-    //                          cv::TermCriteria(cv::TermCriteria::COUNT + cv::TermCriteria::EPS, 30, 0.01),
-    //                          cv::OPTFLOW_USE_INITIAL_FLOW);
-    // // 反向光流
-    // cv::calcOpticalFlowPyrLK(frame_cur_->image(), frame_pre_->image(), pts2d_matched, pts2d_reverse, status_reverse,
-    //                          error, cv::Size(21, 21), TRACK_PYRAMID_LEVEL,
-    //                          cv::TermCriteria(cv::TermCriteria::COUNT + cv::TermCriteria::EPS, 30, 0.01),
-    //                          cv::OPTFLOW_USE_INITIAL_FLOW);
+#else
+    int optflow_flags = (track_aiding_source_ != AIDING_NONE) ? cv::OPTFLOW_USE_INITIAL_FLOW : 0;
+    // 正向光流
+    cv::calcOpticalFlowPyrLK(frame_pre_->image(), frame_cur_->image(), pts2d_map, pts2d_matched, status, error,
+                             cv::Size(21, 21), 1,
+                             cv::TermCriteria(cv::TermCriteria::COUNT + cv::TermCriteria::EPS, TRACK_MAX_ITERATION, 0.01),
+                             optflow_flags);
+    // 反向光流
+    cv::calcOpticalFlowPyrLK(frame_cur_->image(), frame_pre_->image(), pts2d_matched, pts2d_reverse, status_reverse,
+                             error, cv::Size(21, 21), 1,
+                             cv::TermCriteria(cv::TermCriteria::COUNT + cv::TermCriteria::EPS, TRACK_MAX_ITERATION, 0.01),
+                             optflow_flags);
+#endif
 
     // 跟踪失败的
     for (size_t k = 0; k < status.size(); k++) {
@@ -743,7 +757,7 @@ bool Tracking::trackMappoint() {
         auto mappoint = mappoint_matched_[k];
 
         // 将3D-2D匹配到的landmarks指向到当前帧
-        auto velocity = (camera_->pixel2cam(pts2d_matched_undis[k]) - camera_->pixel2cam(pts2d_map_undis[k])) / dt;
+        Vector3d velocity = (camera_->pixel2cam(pts2d_matched_undis[k]) - camera_->pixel2cam(pts2d_map_undis[k])) / dt;
         auto feature  = VisualFeature::createFeature(frame_cur_, {velocity.x(), velocity.y()}, pts2d_matched_undis[k],
                                                      pts2d_matched[k], VisualFeature::FEATURE_MATCHED);
         mappoint->addObservation(feature);
@@ -802,6 +816,7 @@ bool Tracking::trackReferenceFrame() {
     vector<float> error;
     vector<cv::Point2f> pts2d_reverse = pts2d_new_;
 
+#ifdef PA_LVIO_HAVE_OPENCV_CUDA
     cv::cuda::GpuMat pts2d_reverse_gpu(pts2d_reverse), pts2d_cur_gpu(pts2d_cur_);
     cv::cuda::GpuMat status_gpu, status_reverse_gpu;
 
@@ -812,18 +827,19 @@ bool Tracking::trackReferenceFrame() {
     pts2d_cur_gpu.download(pts2d_cur_);
     status_gpu.download(status);
     status_reverse_gpu.download(status_reverse);
-
-    // // 正向光流
-    // cv::calcOpticalFlowPyrLK(frame_pre_->image(), frame_cur_->image(), pts2d_new_, pts2d_cur_, status, error,
-    //                          cv::Size(21, 21), TRACK_PYRAMID_LEVEL,
-    //                          cv::TermCriteria(cv::TermCriteria::COUNT + cv::TermCriteria::EPS, 30, 0.01),
-    //                          cv::OPTFLOW_USE_INITIAL_FLOW);
-    // // 反向光流
-    // cv::calcOpticalFlowPyrLK(frame_cur_->image(), frame_pre_->image(), pts2d_cur_, pts2d_reverse, status_reverse,
-    // error,
-    //                          cv::Size(21, 21), TRACK_PYRAMID_LEVEL,
-    //                          cv::TermCriteria(cv::TermCriteria::COUNT + cv::TermCriteria::EPS, 30, 0.01),
-    //                          cv::OPTFLOW_USE_INITIAL_FLOW);
+#else
+    int optflow_flags = (track_aiding_source_ != AIDING_NONE) ? cv::OPTFLOW_USE_INITIAL_FLOW : 0;
+    // 正向光流
+    cv::calcOpticalFlowPyrLK(frame_pre_->image(), frame_cur_->image(), pts2d_new_, pts2d_cur_, status, error,
+                             cv::Size(21, 21), 3,
+                             cv::TermCriteria(cv::TermCriteria::COUNT + cv::TermCriteria::EPS, TRACK_MAX_ITERATION, 0.01),
+                             optflow_flags);
+    // 反向光流
+    cv::calcOpticalFlowPyrLK(frame_cur_->image(), frame_pre_->image(), pts2d_cur_, pts2d_reverse, status_reverse,
+                             error, cv::Size(21, 21), 3,
+                             cv::TermCriteria(cv::TermCriteria::COUNT + cv::TermCriteria::EPS, TRACK_MAX_ITERATION, 0.01),
+                             optflow_flags);
+#endif
 
     // 剔除跟踪失败的, 正向反向跟踪在0.5个像素以内
     for (size_t k = 0; k < status.size(); k++) {
@@ -927,11 +943,12 @@ void Tracking::featuresDetection(bool ismask) {
             cv::circle(mask, pts2d, track_min_pixel_distance_, 0, cv::FILLED);
         }
     }
+    int track_num = track_max_features_ - static_cast<int>(frame_cur_->features().size());
+#ifdef PA_LVIO_HAVE_OPENCV_CUDA
     cv::cuda::GpuMat mask_gpu;
     mask_gpu.upload(mask);
 
     cv::cuda::GpuMat corners_gpu;
-    int track_num = track_max_features_ - static_cast<int>(frame_cur_->features().size());
     corners_detector_->setMaxCorners(track_num);
     corners_detector_->detect(image_cur_gpu_, corners_gpu, mask_gpu);
 
@@ -952,6 +969,25 @@ void Tracking::featuresDetection(bool ismask) {
             velocity_ref_.emplace_back(0, 0);
         }
     }
+#else
+    if (track_num > 0) {
+        vector<cv::Point2f> corners;
+        cv::goodFeaturesToTrack(frame_cur_->image(), corners, track_num, 0.01, track_min_pixel_distance_, mask);
+        if (!corners.empty()) {
+            // 亚像素角点提取参数
+            cv::Size win_size  = cv::Size(5, 5);
+            cv::Size zero_zone = cv::Size(-1, -1);
+            auto term_crit     = cv::TermCriteria(cv::TermCriteria::COUNT + cv::TermCriteria::EPS, 20, 0.01);
+            cv::cornerSubPix(frame_cur_->image(), corners, win_size, zero_zone, term_crit);
+            for (const auto &pt : corners) {
+                pts2d_ref_.push_back(pt);
+                pts2d_new_.push_back(pt);
+                pts2d_ref_frame_.push_back(frame_cur_);
+                velocity_ref_.emplace_back(0, 0);
+            }
+        }
+    }
+#endif
 
     LOGI << "Feature detection cost " << timecost.costInMillisecond() << " ms";
 }

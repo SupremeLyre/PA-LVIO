@@ -21,18 +21,15 @@
 #ifndef FUSION_H
 #define FUSION_H
 
+#include "ROS/ros_compat.h"
 #include "lidar/lidar_converter.h"
 
 #include "common/types.h"
 #include "lvio/lvio.h"
 
-#include <livox_ros_driver/CustomMsg.h>
-#include <ros/ros.h>
-#include <sensor_msgs/CompressedImage.h>
-#include <sensor_msgs/Image.h>
-#include <sensor_msgs/Imu.h>
-
+#include <atomic>
 #include <memory>
+#include <queue>
 
 extern std::atomic<bool> global_finished;
 
@@ -40,28 +37,41 @@ class Fusion {
 
 public:
     Fusion() = default;
+#if ROS_AVAILABLE == 2
+    explicit Fusion(const rclcpp::Node::SharedPtr &node)
+        : node_(node) {
+    }
+#endif
 
     void run(const string &config_file, bool logtostderr = true);
 
     void setFinished();
 
 private:
-    void imuCallback(const sensor_msgs::ImuConstPtr &imumsg);
+    void imuCallback(const ImuMsgConstPtr &imumsg);
 
-    void imageCallback(const sensor_msgs::ImageConstPtr &imagemsg);
-    void imageCallback(const sensor_msgs::CompressedImageConstPtr &imagemsg);
+    void imageCallback(const ImageMsgConstPtr &imagemsg);
+    void imageCallback(const CompressedImageMsgConstPtr &imagemsg);
 
-    void livoxCallback(const livox_ros_driver::CustomMsgConstPtr &lidarmsg);
-    void pointCloudCallback(const sensor_msgs::PointCloud2ConstPtr &lidarmsg);
+    void livoxCallback(const LivoxCustomMsgConstPtr &lidarmsg);
+    void pointCloudCallback(const PointCloud2MsgConstPtr &lidarmsg);
 
     void addImuData(const IMU &imu);
 
+#if ROS_AVAILABLE == 1
     void processSubscribe(const string &imu_topic, const string &image_topic, const string &lidar_topic,
                           ros::NodeHandle &nh);
+#elif ROS_AVAILABLE == 2
+    void processSubscribe(const string &imu_topic, const string &image_topic, const string &lidar_topic,
+                          const rclcpp::Node::SharedPtr &node);
+#endif
     void processRead(const string &imu_topic, const string &image_topic, const string &lidar_topic,
                      const string &bagfile);
 
 private:
+#if ROS_AVAILABLE == 2
+    rclcpp::Node::SharedPtr node_;
+#endif
     std::shared_ptr<LVIO> lvio_;
 
     bool is_use_visual_{false};

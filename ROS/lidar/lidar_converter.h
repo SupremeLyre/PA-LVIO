@@ -21,11 +21,8 @@
 #ifndef LIDAR_CONVERTER_H
 #define LIDAR_CONVERTER_H
 
+#include "ROS/ros_compat.h"
 #include "lidar/lidar.h"
-
-#include <livox_ros_driver/CustomMsg.h>
-#include <livox_ros_driver/CustomPoint.h>
-#include <sensor_msgs/PointCloud2.h>
 
 using std::vector;
 
@@ -38,21 +35,21 @@ public:
     LidarConverter(double frame_rate, int scan_line, int point_filter_num, double nearest_distance,
                    double farthest_distance);
 
-    size_t livoxPointCloudConvertion(const livox_ros_driver::CustomMsgConstPtr &msg,
+    size_t livoxPointCloudConvertion(const LivoxCustomMsgConstPtr &msg,
                                      PointCloudCustomPtr &pointcloud_raw, PointCloudCustomPtr &pointcloud_ds,
                                      double &start, double &end);
 
-    size_t velodynePointCloudConvertion(const sensor_msgs::PointCloud2ConstPtr &msg, PointCloudCustomPtr &pointcloud,
+    size_t velodynePointCloudConvertion(const PointCloud2MsgConstPtr &msg, PointCloudCustomPtr &pointcloud,
                                         double &start, double &end);
 
-    size_t ousterPointCloudConvertion(const sensor_msgs::PointCloud2ConstPtr &msg, PointCloudCustomPtr &pointcloud,
+    size_t ousterPointCloudConvertion(const PointCloud2MsgConstPtr &msg, PointCloudCustomPtr &pointcloud,
                                         double &start, double &end);
 
 
-    size_t hesaiPointCloudConvertion(const sensor_msgs::PointCloud2ConstPtr &msg, PointCloudCustomPtr &pointcloud,
+    size_t hesaiPointCloudConvertion(const PointCloud2MsgConstPtr &msg, PointCloudCustomPtr &pointcloud,
                                         double &start, double &end);
 private:
-    static PointTypeCustom livoxPointConvertion(const livox_ros_driver::CustomPoint &point, uint64_t timebase);
+    static PointTypeCustom livoxPointConvertion(const LivoxCustomPoint &point, uint64_t timebase);
 
 private:
     double nearest_distance_{1.0};

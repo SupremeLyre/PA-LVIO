@@ -144,6 +144,9 @@ string Logging::doubleData(double data) {
 
 void Logging::shutdownLogging() {
     // 程序结束时清理
-    absl::RemoveLogSink(dual_sink);
-    delete dual_sink;
+    if (dual_sink) {
+        absl::RemoveLogSink(dual_sink);
+        delete dual_sink;
+        dual_sink = nullptr;
+    }
 }

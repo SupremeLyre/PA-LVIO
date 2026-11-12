@@ -29,10 +29,14 @@
 #include "visual/visual_map.h"
 #include "visual/visual_mappoint.h"
 
+#include <opencv2/opencv_modules.hpp>
+#if defined(HAVE_OPENCV_CUDAIMGPROC) && defined(HAVE_OPENCV_CUDAFEATURES2D) && defined(HAVE_OPENCV_CUDAOPTFLOW)
+#define PA_LVIO_HAVE_OPENCV_CUDA 1
 #include <opencv2/core/cuda.hpp>
 #include <opencv2/cudaimgproc.hpp>
 #include <opencv2/cudafeatures2d.hpp>
 #include <opencv2/cudaoptflow.hpp>
+#endif
 #include <pcl/kdtree/kdtree_flann.h>
 
 namespace visual {
@@ -159,10 +163,14 @@ private:
     VisualDrawer::Ptr visual_drawer_;
 
     // 图像处理
+#ifdef PA_LVIO_HAVE_OPENCV_CUDA
     cv::Ptr<cv::cuda::CLAHE> clahe_;
-        cv::Ptr<cv::cuda::CornersDetector> corners_detector_;
+    cv::Ptr<cv::cuda::CornersDetector> corners_detector_;
     cv::cuda::GpuMat image_cur_gpu_, image_pre_gpu_;
     cv::Ptr<cv::cuda::SparsePyrLKOpticalFlow> optical_flow_map_, optical_flow_ref_;
+#else
+    cv::Ptr<cv::CLAHE> clahe_;
+#endif
 
     // 特征点
     vector<cv::Point2f> pts2d_cur_, pts2d_new_, pts2d_ref_;

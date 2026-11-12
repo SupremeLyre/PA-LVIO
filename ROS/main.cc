@@ -27,6 +27,7 @@
 #include <csignal>
 #include <iostream>
 #include <memory>
+#include <unistd.h>
 
 #include <absl/strings/numbers.h>
 
@@ -34,6 +35,15 @@ void sigintHandler(int sig);
 void checkStateThread(std::shared_ptr<Fusion> fusion);
 
 int main(int argc, char *argv[]) {
+#if ROS_AVAILABLE == 1
+    // ROS节点初始化
+    ros::init(argc, argv, "lvio_node", ros::InitOption::NoSigintHandler | ros::InitOption::AnonymousName);
+
+    if (argc < 2) {
+        std::cout << "Usage: pa_lvio_ros <config_file> [logtostderr]" << std::endl;
+        return -1;
+    }
+
     // 配置文件路径
     string config_file(argv[1]);
 
@@ -46,14 +56,43 @@ int main(int argc, char *argv[]) {
         }
     }
 
-    // ROS节点初始化
-    ros::init(argc, argv, "lvio_node", ros::InitOption::NoSigintHandler | ros::InitOption::AnonymousName);
+    auto fusion = std::make_shared<Fusion>();
+#elif ROS_AVAILABLE == 2
+    // ROS 2节点初始化
+    rclcpp::init(argc, argv, rclcpp::InitOptions(), rclcpp::SignalHandlerOptions::None);
+    auto non_ros_args = rclcpp::remove_ros_arguments(argc, argv);
+    auto node         = std::make_shared<rclcpp::Node>("lvio_node");
+
+    string config_file;
+    bool logtostderr = false;
+    if (non_ros_args.size() >= 2) {
+        config_file = non_ros_args[1];
+        if (non_ros_args.size() >= 3) {
+            int res;
+            if (absl::SimpleAtoi(non_ros_args[2], &res)) {
+                logtostderr = (res == 1);
+            }
+        }
+    } else {
+        node->declare_parameter<string>("config_file", "");
+        node->declare_parameter<bool>("logtostderr", false);
+        node->get_parameter("config_file", config_file);
+        node->get_parameter("logtostderr", logtostderr);
+    }
+
+    if (config_file.empty()) {
+        std::cout << "Usage: pa_lvio_ros <config_file> [logtostderr]" << std::endl;
+        rclcpp::shutdown();
+        return -1;
+    }
+
+    auto fusion = std::make_shared<Fusion>(node);
+#endif
 
     // 注册信号处理函数
     std::signal(SIGINT, sigintHandler);
 
     std::cout << "Fusion process is started..." << std::endl;
-    auto fusion = std::make_shared<Fusion>();
 
     // 退出检测线程
     std::thread check_thread(checkStateThread, fusion);
@@ -88,6 +127,12 @@ void checkStateThread(std::shared_ptr<Fusion> fusion) {
     std::cout << "LVIO has been shutdown ..." << std::endl;
 
     // 关闭ROS
+#if ROS_AVAILABLE == 1
     ros::shutdown();
+#elif ROS_AVAILABLE == 2
+    if (rclcpp::ok()) {
+        rclcpp::shutdown();
+    }
+#endif
     std::cout << "ROS node has been shutdown ..." << std::endl;
 }

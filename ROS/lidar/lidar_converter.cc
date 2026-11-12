@@ -22,6 +22,7 @@
 
 #include "common/logging.h"
 
+#include <cfloat>
 #include <pcl_conversions/pcl_conversions.h>
 
 LidarConverter::LidarConverter(double frame_rate, int scan_line, int point_filter_num, double nearest_distance,
@@ -34,7 +35,7 @@ LidarConverter::LidarConverter(double frame_rate, int scan_line, int point_filte
     farthest_square_distance_ = farthest_distance * farthest_distance;
 }
 
-size_t LidarConverter::livoxPointCloudConvertion(const livox_ros_driver::CustomMsgConstPtr &msg,
+size_t LidarConverter::livoxPointCloudConvertion(const LivoxCustomMsgConstPtr &msg,
                                                  PointCloudCustomPtr &pointcloud_raw,
                                                  PointCloudCustomPtr &pointcloud_ds, double &start, double &end) {
     pointcloud_raw->clear();
@@ -43,7 +44,7 @@ size_t LidarConverter::livoxPointCloudConvertion(const livox_ros_driver::CustomM
     pointcloud_ds->reserve(msg->points.size());
 
     // 使用统一的时间
-    uint64_t timebase = msg->header.stamp.toNSec();
+    uint64_t timebase = stampToNanosec(msg->header.stamp);
 
     int num_points = 0;
     int filter_num = point_filter_num_;
@@ -81,7 +82,7 @@ size_t LidarConverter::livoxPointCloudConvertion(const livox_ros_driver::CustomM
     return pointcloud_ds->size();
 }
 
-size_t LidarConverter::velodynePointCloudConvertion(const sensor_msgs::PointCloud2ConstPtr &msg,
+size_t LidarConverter::velodynePointCloudConvertion(const PointCloud2MsgConstPtr &msg,
                                                     PointCloudCustomPtr &pointcloud, double &start, double &end) {
     pointcloud->clear();
 
@@ -94,7 +95,7 @@ size_t LidarConverter::velodynePointCloudConvertion(const sensor_msgs::PointClou
     }
 
     // 数据包时间
-    double stamp = msg->header.stamp.toSec();
+    double stamp = stampToSec(msg->header.stamp);
 
     // 根据最后一个点判断是否需要计算时间偏差
     bool is_need_time = false;
@@ -162,7 +163,7 @@ size_t LidarConverter::velodynePointCloudConvertion(const sensor_msgs::PointClou
     return pointcloud->size();
 }
 
-size_t LidarConverter::ousterPointCloudConvertion(const sensor_msgs::PointCloud2ConstPtr &msg,
+size_t LidarConverter::ousterPointCloudConvertion(const PointCloud2MsgConstPtr &msg,
                                                   PointCloudCustomPtr &pointcloud, double &start, double &end) {
     pointcloud->clear();
 
@@ -170,7 +171,7 @@ size_t LidarConverter::ousterPointCloudConvertion(const sensor_msgs::PointCloud2
     pcl::fromROSMsg(*msg, pointcloud_raw);
 
     // 数据包时间
-    double stamp = msg->header.stamp.toSec();
+    double stamp = stampToSec(msg->header.stamp);
 
     std::vector<int> point_counts(scan_line_, 0);
     PointTypeCustom point;
@@ -204,7 +205,7 @@ size_t LidarConverter::ousterPointCloudConvertion(const sensor_msgs::PointCloud2
     return pointcloud->size();
 }
 
-size_t LidarConverter::hesaiPointCloudConvertion(const sensor_msgs::PointCloud2ConstPtr &msg,
+size_t LidarConverter::hesaiPointCloudConvertion(const PointCloud2MsgConstPtr &msg,
                                                  PointCloudCustomPtr &pointcloud, double &start, double &end) {
     pointcloud->clear();
 
@@ -243,7 +244,7 @@ size_t LidarConverter::hesaiPointCloudConvertion(const sensor_msgs::PointCloud2C
     return pointcloud->size();
 }
 
-PointTypeCustom LidarConverter::livoxPointConvertion(const livox_ros_driver::CustomPoint &raw, uint64_t timebase) {
+PointTypeCustom LidarConverter::livoxPointConvertion(const LivoxCustomPoint &raw, uint64_t timebase) {
     PointTypeCustom point;
 
     point.x         = raw.x;

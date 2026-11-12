@@ -23,25 +23,39 @@
 #include "common/logging.h"
 #include "common/rotation.h"
 
-#include <nav_msgs/Odometry.h>
-#include <sensor_msgs/PointCloud2.h>
-
 #include <pcl/filters/random_sample.h>
 #include <pcl_conversions/pcl_conversions.h>
 
+#if ROS_AVAILABLE == 1
 LidarViewerRviz::LidarViewerRviz(ros::NodeHandle &nh)
     : is_finished_(false) {
     frame_id_ = "world";
 
-    pose_pub_    = nh.advertise<nav_msgs::Odometry>("/lidar/pose", 10);
-    path_pub_    = nh.advertise<nav_msgs::Path>("/lidar/path", 10);
-    current_pub_ = nh.advertise<sensor_msgs::PointCloud2>("/lidar/current", 10);
-    plane_pub_   = nh.advertise<sensor_msgs::PointCloud2>("/lidar/plane", 10);
-    map_pub_     = nh.advertise<sensor_msgs::PointCloud2>("/lidar/map", 10);
-    rgb_map_pub_ = nh.advertise<sensor_msgs::PointCloud2>("/lidar/rgb_map", 10);
+    pose_pub_    = nh.advertise<OdometryMsg>("/lidar/pose", 10);
+    path_pub_    = nh.advertise<PathMsg>("/lidar/path", 10);
+    current_pub_ = nh.advertise<PointCloud2Msg>("/lidar/current", 10);
+    plane_pub_   = nh.advertise<PointCloud2Msg>("/lidar/plane", 10);
+    map_pub_     = nh.advertise<PointCloud2Msg>("/lidar/map", 10);
+    rgb_map_pub_ = nh.advertise<PointCloud2Msg>("/lidar/rgb_map", 10);
 
     map_pointcloud_ = PointCloudPtr(new PointCloud);
 }
+#elif ROS_AVAILABLE == 2
+LidarViewerRviz::LidarViewerRviz(const rclcpp::Node::SharedPtr &node)
+    : node_(node)
+    , is_finished_(false) {
+    frame_id_ = "world";
+
+    pose_pub_    = node_->create_publisher<OdometryMsg>("/lidar/pose", 10);
+    path_pub_    = node_->create_publisher<PathMsg>("/lidar/path", 10);
+    current_pub_ = node_->create_publisher<PointCloud2Msg>("/lidar/current", 10);
+    plane_pub_   = node_->create_publisher<PointCloud2Msg>("/lidar/plane", 10);
+    map_pub_     = node_->create_publisher<PointCloud2Msg>("/lidar/map", 10);
+    rgb_map_pub_ = node_->create_publisher<PointCloud2Msg>("/lidar/rgb_map", 10);
+
+    map_pointcloud_ = PointCloudPtr(new PointCloud);
+}
+#endif
 
 void LidarViewerRviz::setFinished() {
     is_finished_ = true;
@@ -132,10 +146,10 @@ void LidarViewerRviz::updateCurrentPose(const Pose &pose) {
 void LidarViewerRviz::publishOdometry() {
     std::unique_lock<std::mutex> lock(map_mutex_);
 
-    nav_msgs::Odometry odometry;
+    OdometryMsg odometry;
 
     auto quaternion = Rotation::matrix2quaternion(pose_.R);
-    auto stamp      = ros::Time::now();
+    auto stamp      = currentRosStamp();
 
     // Odometry
     odometry.header.stamp            = stamp;
@@ -147,10 +161,10 @@ void LidarViewerRviz::publishOdometry() {
     odometry.pose.pose.orientation.y = quaternion.y();
     odometry.pose.pose.orientation.z = quaternion.z();
     odometry.pose.pose.orientation.w = quaternion.w();
-    pose_pub_.publish(odometry);
+    publishRosMsg(pose_pub_, odometry);
 
     // Path
-    geometry_msgs::PoseStamped pose_stamped;
+    PoseStampedMsg pose_stamped;
     pose_stamped.header.stamp    = stamp;
     pose_stamped.header.frame_id = frame_id_;
     pose_stamped.pose            = odometry.pose.pose;
@@ -158,65 +172,65 @@ void LidarViewerRviz::publishOdometry() {
     path_.header.stamp    = stamp;
     path_.header.frame_id = frame_id_;
     path_.poses.push_back(pose_stamped);
-    path_pub_.publish(path_);
+    publishRosMsg(path_pub_, path_);
 }
 
 void LidarViewerRviz::publishCurrentPointCloud() {
     std::unique_lock<std::mutex> lock(map_mutex_);
 
-    auto stamp = ros::Time::now();
+    auto stamp = currentRosStamp();
 
-    sensor_msgs::PointCloud2 current_msg;
+    PointCloud2Msg current_msg;
     pcl::toROSMsg(*current_pointcloud_, current_msg);
 
     // toROSMsg() will overwrite these parameters
     current_msg.header.stamp    = stamp;
     current_msg.header.frame_id = frame_id_;
 
-    current_pub_.publish(current_msg);
+    publishRosMsg(current_pub_, current_msg);
 }
 
 void LidarViewerRviz::publishPlanePointCloud() {
     std::unique_lock<std::mutex> lock(map_mutex_);
 
-    auto stamp = ros::Time::now();
+    auto stamp = currentRosStamp();
 
-    sensor_msgs::PointCloud2 plane_msg;
+    PointCloud2Msg plane_msg;
     pcl::toROSMsg(*plane_pointcloud_, plane_msg);
 
     // toROSMsg() will overwrite these parameters
     plane_msg.header.stamp    = stamp;
     plane_msg.header.frame_id = frame_id_;
 
-    plane_pub_.publish(plane_msg);
+    publishRosMsg(plane_pub_, plane_msg);
 }
 
 void LidarViewerRviz::publishMapPointCloud() {
     std::unique_lock<std::mutex> lock(map_mutex_);
 
-    auto stamp = ros::Time::now();
+    auto stamp = currentRosStamp();
 
-    sensor_msgs::PointCloud2 map_msg;
+    PointCloud2Msg map_msg;
     pcl::toROSMsg(*map_pointcloud_, map_msg);
 
     // toROSMsg() will overwrite these parameters
     map_msg.header.stamp    = stamp;
     map_msg.header.frame_id = frame_id_;
 
-    map_pub_.publish(map_msg);
+    publishRosMsg(map_pub_, map_msg);
 }
 
 void LidarViewerRviz::publishRGBMapPointCloud() {
     std::unique_lock<std::mutex> lock(map_mutex_);
 
-    auto stamp = ros::Time::now();
+    auto stamp = currentRosStamp();
 
-    sensor_msgs::PointCloud2 rgb_map_msg;
+    PointCloud2Msg rgb_map_msg;
     pcl::toROSMsg(*rgb_map_pointcloud_, rgb_map_msg);
 
     // toROSMsg() will overwrite these parameters
     rgb_map_msg.header.stamp    = stamp;
     rgb_map_msg.header.frame_id = frame_id_;
 
-    rgb_map_pub_.publish(rgb_map_msg);
+    publishRosMsg(rgb_map_pub_, rgb_map_msg);
 }

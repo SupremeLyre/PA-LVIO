@@ -21,6 +21,7 @@
 #ifndef VISUAL_DRAWER_RVIZ_H
 #define VISUAL_DRAWER_RVIZ_H
 
+#include "ROS/ros_compat.h"
 #include "visual/visual_drawer.h"
 
 #include <atomic>
@@ -28,16 +29,17 @@
 #include <memory>
 #include <mutex>
 
-#include <nav_msgs/Path.h>
-#include <ros/ros.h>
-
 using std::string;
 using std::vector;
 
 class VisualDrawerRviz : public visual::VisualDrawer {
 
 public:
+#if ROS_AVAILABLE == 1
     explicit VisualDrawerRviz(ros::NodeHandle &nh);
+#elif ROS_AVAILABLE == 2
+    explicit VisualDrawerRviz(const rclcpp::Node::SharedPtr &node);
+#endif
 
     void run() override;
 
@@ -55,6 +57,16 @@ public:
     void updateTrackedRefPoints(vector<cv::Point2f> ref, vector<cv::Point2f> cur) override;
 
 private:
+#if ROS_AVAILABLE == 1
+    ros::Time currentRosStamp() const {
+        return ros::Time::now();
+    }
+#elif ROS_AVAILABLE == 2
+    builtin_interfaces::msg::Time currentRosStamp() const {
+        return node_->now();
+    }
+#endif
+
     void publishTrackingImage();
 
     void publishMapPoints();
@@ -81,14 +93,24 @@ private:
     vector<Vector3d> current_mappoints_;
 
     Pose pose_;
-    nav_msgs::Path path_;
+    PathMsg path_;
 
+#if ROS_AVAILABLE == 1
     ros::Publisher path_pub_;
     ros::Publisher pose_pub_;
     ros::Publisher track_image_pub_;
     ros::Publisher raw_image_pub_;
     ros::Publisher fixed_points_pub_;
     ros::Publisher current_points_pub_;
+#elif ROS_AVAILABLE == 2
+    rclcpp::Node::SharedPtr node_;
+    rclcpp::Publisher<PathMsg>::SharedPtr path_pub_;
+    rclcpp::Publisher<OdometryMsg>::SharedPtr pose_pub_;
+    rclcpp::Publisher<ImageMsg>::SharedPtr track_image_pub_;
+    rclcpp::Publisher<ImageMsg>::SharedPtr raw_image_pub_;
+    rclcpp::Publisher<PointCloudMsg>::SharedPtr fixed_points_pub_;
+    rclcpp::Publisher<PointCloudMsg>::SharedPtr current_points_pub_;
+#endif
 
     string frame_id_;
 };

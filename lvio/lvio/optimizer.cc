@@ -481,7 +481,7 @@ void Optimizer::updateParametersFromOptimizer(const deque<double> &timelist, con
                 depth = 1.0 / visual_mappoints_[mappoint->id()];
             }
 
-            auto pc         = depth * camera_->pixel2cam(mappoint->referenceKeypoint());
+            Vector3d pc     = depth * camera_->pixel2cam(mappoint->referenceKeypoint());
             mappoint->pos() = camera_->cam2world(pc, mappoint->referenceFrame()->pose());
             mappoint->updateDepth(depth);
         }

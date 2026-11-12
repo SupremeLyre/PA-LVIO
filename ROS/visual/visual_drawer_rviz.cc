@@ -23,11 +23,7 @@
 #include "common/logging.h"
 #include "common/rotation.h"
 
-#include <nav_msgs/Odometry.h>
-#include <sensor_msgs/Image.h>
-#include <sensor_msgs/PointCloud.h>
-#include <sensor_msgs/image_encodings.h>
-
+#if ROS_AVAILABLE == 1
 VisualDrawerRviz::VisualDrawerRviz(ros::NodeHandle &nh)
     : is_finished_(false)
     , isframerdy_(false)
@@ -35,13 +31,30 @@ VisualDrawerRviz::VisualDrawerRviz(ros::NodeHandle &nh)
 
     frame_id_ = "world";
 
-    pose_pub_           = nh.advertise<nav_msgs::Odometry>("/visual/pose", 2);
-    path_pub_           = nh.advertise<nav_msgs::Path>("/visual/path", 2);
-    track_image_pub_    = nh.advertise<sensor_msgs::Image>("/visual/tracking", 2);
-    raw_image_pub_      = nh.advertise<sensor_msgs::Image>("/visual/image", 2);
-    fixed_points_pub_   = nh.advertise<sensor_msgs::PointCloud>("/visual/fixed", 2);
-    current_points_pub_ = nh.advertise<sensor_msgs::PointCloud>("/visual/current", 2);
+    pose_pub_           = nh.advertise<OdometryMsg>("/visual/pose", 2);
+    path_pub_           = nh.advertise<PathMsg>("/visual/path", 2);
+    track_image_pub_    = nh.advertise<ImageMsg>("/visual/tracking", 2);
+    raw_image_pub_      = nh.advertise<ImageMsg>("/visual/image", 2);
+    fixed_points_pub_   = nh.advertise<PointCloudMsg>("/visual/fixed", 2);
+    current_points_pub_ = nh.advertise<PointCloudMsg>("/visual/current", 2);
 }
+#elif ROS_AVAILABLE == 2
+VisualDrawerRviz::VisualDrawerRviz(const rclcpp::Node::SharedPtr &node)
+    : is_finished_(false)
+    , isframerdy_(false)
+    , ismaprdy_(false)
+    , node_(node) {
+
+    frame_id_ = "world";
+
+    pose_pub_           = node_->create_publisher<OdometryMsg>("/visual/pose", 2);
+    path_pub_           = node_->create_publisher<PathMsg>("/visual/path", 2);
+    track_image_pub_    = node_->create_publisher<ImageMsg>("/visual/tracking", 2);
+    raw_image_pub_      = node_->create_publisher<ImageMsg>("/visual/image", 2);
+    fixed_points_pub_   = node_->create_publisher<PointCloudMsg>("/visual/fixed", 2);
+    current_points_pub_ = node_->create_publisher<PointCloudMsg>("/visual/current", 2);
+}
+#endif
 
 void VisualDrawerRviz::setFinished() {
     is_finished_ = true;
@@ -110,8 +123,8 @@ void VisualDrawerRviz::publishTrackingImage() {
     // OpenCV RGB format is saved as BGR
 
     // Tracked image
-    sensor_msgs::Image image;
-    image.header.stamp    = ros::Time::now();
+    ImageMsg image;
+    image.header.stamp    = currentRosStamp();
     image.header.frame_id = frame_id_;
     image.encoding        = sensor_msgs::image_encodings::BGR8;
     image.height          = drawed.rows;
@@ -122,10 +135,10 @@ void VisualDrawerRviz::publishTrackingImage() {
     image.data.resize(size);
     memcpy(image.data.data(), drawed.data, size);
 
-    track_image_pub_.publish(image);
+    publishRosMsg(track_image_pub_, image);
 
     // Raw image
-    image.header.stamp    = ros::Time::now();
+    image.header.stamp    = currentRosStamp();
     image.header.frame_id = frame_id_;
     image.height          = raw_image_.rows;
     image.width           = raw_image_.cols;
@@ -144,46 +157,46 @@ void VisualDrawerRviz::publishTrackingImage() {
     image.data.resize(size);
     memcpy(image.data.data(), raw_image_.data, size);
 
-    raw_image_pub_.publish(image);
+    publishRosMsg(raw_image_pub_, image);
 }
 
 void VisualDrawerRviz::publishMapPoints() {
     std::unique_lock<std::mutex> lock(map_mutex_);
 
-    auto stamp = ros::Time::now();
+    auto stamp = currentRosStamp();
 
     // 发布窗口内的路标点
-    sensor_msgs::PointCloud current_pointcloud;
+    PointCloudMsg current_pointcloud;
 
     current_pointcloud.header.stamp    = stamp;
     current_pointcloud.header.frame_id = frame_id_;
 
     // 获取当前点云
     for (const auto &current : current_mappoints_) {
-        geometry_msgs::Point32 point;
+        Point32Msg point;
         point.x = static_cast<float>(current.x());
         point.y = static_cast<float>(current.y());
         point.z = static_cast<float>(current.z());
 
         current_pointcloud.points.push_back(point);
     }
-    current_points_pub_.publish(current_pointcloud);
+    publishRosMsg(current_points_pub_, current_pointcloud);
 
     // 发布新的地图点
-    sensor_msgs::PointCloud fixed_pointcloud;
+    PointCloudMsg fixed_pointcloud;
 
     fixed_pointcloud.header.stamp    = stamp;
     fixed_pointcloud.header.frame_id = frame_id_;
 
     for (const auto &pts : fixed_mappoints_) {
-        geometry_msgs::Point32 point;
+        Point32Msg point;
         point.x = static_cast<float>(pts.x());
         point.y = static_cast<float>(pts.y());
         point.z = static_cast<float>(pts.z());
 
         fixed_pointcloud.points.push_back(point);
     }
-    fixed_points_pub_.publish(fixed_pointcloud);
+    publishRosMsg(fixed_points_pub_, fixed_pointcloud);
 
     fixed_mappoints_.clear();
 }
@@ -191,10 +204,10 @@ void VisualDrawerRviz::publishMapPoints() {
 void VisualDrawerRviz::publishOdometry() {
     std::unique_lock<std::mutex> lock(map_mutex_);
 
-    nav_msgs::Odometry odometry;
+    OdometryMsg odometry;
 
     auto quaternion = Rotation::matrix2quaternion(pose_.R);
-    auto stamp      = ros::Time::now();
+    auto stamp      = currentRosStamp();
 
     // Odometry
     odometry.header.stamp            = stamp;
@@ -206,10 +219,10 @@ void VisualDrawerRviz::publishOdometry() {
     odometry.pose.pose.orientation.y = quaternion.y();
     odometry.pose.pose.orientation.z = quaternion.z();
     odometry.pose.pose.orientation.w = quaternion.w();
-    pose_pub_.publish(odometry);
+    publishRosMsg(pose_pub_, odometry);
 
     // Path
-    geometry_msgs::PoseStamped pose_stamped;
+    PoseStampedMsg pose_stamped;
     pose_stamped.header.stamp    = stamp;
     pose_stamped.header.frame_id = frame_id_;
     pose_stamped.pose            = odometry.pose.pose;
@@ -217,7 +230,7 @@ void VisualDrawerRviz::publishOdometry() {
     path_.header.stamp    = stamp;
     path_.header.frame_id = frame_id_;
     path_.poses.push_back(pose_stamped);
-    path_pub_.publish(path_);
+    publishRosMsg(path_pub_, path_);
 }
 
 void VisualDrawerRviz::updateCurrentMappoints(vector<Vector3d> points) {
