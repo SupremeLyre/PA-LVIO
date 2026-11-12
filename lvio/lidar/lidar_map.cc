@@ -145,7 +145,8 @@ void LidarMap::removeOldestLidarFrame() {
     if (lidar_frame_map_.find(marginalized_frame_->id()) != lidar_frame_map_.end()) {
         // 将最老帧加入全局地图, 从而保证最新帧能够有效匹配
         if (is_use_frame_to_map_) {
-            task_group_.run([this]() { addNewPointsToGlobalMap(marginalized_frame_); });
+            auto frame = marginalized_frame_;
+            task_group_.run([this, frame]() { addNewPointsToGlobalMap(frame); });
         }
         auto ikd_tree = lidar_frame_map_[marginalized_frame_->id()];
         lidar_frame_map_.erase(marginalized_frame_->id());
@@ -227,8 +228,10 @@ void LidarMap::mergeNonKeyframes(const vector<LidarFrame::Ptr> &nonkeyframes, Li
 
         // 点云累积
         *keyframe->pointCloudMapFull() += *nonkeyframe->pointCloudMapFull();
+        nonkeyframe->releaseRawPointCloud();
     }
     keyframe->setNumMergedFrames(nonkeyframes.size());
+    keyframe->releaseRawPointCloud();
 
     // 降采样
     downsample_filter_.setInputCloud(keyframe->pointCloudMapFull());
@@ -495,6 +498,7 @@ int LidarMap::findFeaturesInGlobalMap(ikd_Tree::KD_TREE<PointType>::Ptr ikdtree,
 }
 
 bool LidarMap::addNewPointCloudToMap(PointCloudPtr map_pointcloud) {
+    map_pointcloud->clear();
     if (!marginalized_frame_) {
         return false;
     }
@@ -507,6 +511,8 @@ bool LidarMap::addNewPointCloudToMap(PointCloudPtr map_pointcloud) {
     if (is_save_pointcloud_ && !map_pointcloud->empty()) {
         *saved_pointcloud_ += *map_pointcloud;
     }
+
+    marginalized_frame_ = nullptr;
 
     return true;
 }

@@ -38,7 +38,8 @@ LidarViewerRviz::LidarViewerRviz(ros::NodeHandle &nh)
     map_pub_     = nh.advertise<PointCloud2Msg>("/lidar/map", 10);
     rgb_map_pub_ = nh.advertise<PointCloud2Msg>("/lidar/rgb_map", 10);
 
-    map_pointcloud_ = PointCloudPtr(new PointCloud);
+    map_pointcloud_     = PointCloudPtr(new PointCloud);
+    rgb_map_pointcloud_ = RGBPointCloudPtr(new RGBPointCloud);
 }
 #elif ROS_AVAILABLE == 2
 LidarViewerRviz::LidarViewerRviz(const rclcpp::Node::SharedPtr &node)
@@ -53,7 +54,8 @@ LidarViewerRviz::LidarViewerRviz(const rclcpp::Node::SharedPtr &node)
     map_pub_     = node_->create_publisher<PointCloud2Msg>("/lidar/map", 10);
     rgb_map_pub_ = node_->create_publisher<PointCloud2Msg>("/lidar/rgb_map", 10);
 
-    map_pointcloud_ = PointCloudPtr(new PointCloud);
+    map_pointcloud_     = PointCloudPtr(new PointCloud);
+    rgb_map_pointcloud_ = RGBPointCloudPtr(new RGBPointCloud);
 }
 #endif
 
@@ -100,7 +102,12 @@ void LidarViewerRviz::run() {
 
 void LidarViewerRviz::updateRGBMapPointCloud(RGBPointCloudPtr pointcloud) {
     std::unique_lock<std::mutex> lock(map_mutex_);
-    rgb_map_pointcloud_ = std::move(pointcloud);
+
+    // 随机降采样 1/10
+    pcl::RandomSample<pcl::PointXYZRGB> random_sample;
+    random_sample.setSample(pointcloud->size() / 10);
+    random_sample.setInputCloud(pointcloud);
+    random_sample.filter(*rgb_map_pointcloud_);
 
     is_rgb_map_pointcloud_ = true;
     update_sem_.notify_one();

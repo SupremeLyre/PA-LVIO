@@ -117,6 +117,10 @@ public:
         return raw_pointcloud_;
     }
 
+    void releaseRawPointCloud() {
+        raw_pointcloud_.reset();
+    }
+
     PointCloudPtr pointCloudLidar() const {
         return pointcloud_lidar_;
     }

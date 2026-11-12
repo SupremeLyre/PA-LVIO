@@ -180,6 +180,10 @@ bool LVIO::addNewImu(const IMU &imu) {
 
 bool LVIO::addNewVisualFrame(const VisualFrame::Ptr &frame) {
     Lock lock(visual_frame_buffer_mutex_);
+    if (visual_frame_buffer_.size() >= reserved_buffer_counts_ * 2) {
+        visual_frame_buffer_.pop();
+        LOGW << "Visual frame buffer overflow, dropping oldest frame";
+    }
     visual_frame_buffer_.push(frame);
 
     return true;
@@ -188,6 +192,10 @@ bool LVIO::addNewVisualFrame(const VisualFrame::Ptr &frame) {
 bool LVIO::addNewLidarFrame(const LidarFrame::Ptr &frame) {
     // 需要构建初始地图
     Lock lock(lidar_frame_buffer_mutex_);
+    if (lidar_frame_buffer_.size() >= reserved_buffer_counts_ * 2) {
+        lidar_frame_buffer_.pop();
+        LOGW << "Lidar frame buffer overflow, dropping oldest frame";
+    }
     lidar_frame_buffer_.push(frame);
 
     return true;

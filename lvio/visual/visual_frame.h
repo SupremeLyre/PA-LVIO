@@ -80,6 +80,8 @@ public:
     void clearFeatures() {
         features_.clear();
         unupdated_mappoints_.clear();
+        image_.release();
+        raw_image_.release();
     }
 
     size_t numFeatures() {

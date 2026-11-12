@@ -21,6 +21,10 @@ template <typename PointType> KD_TREE<PointType>::~KD_TREE() {
     stop_thread();
     Delete_Storage_Disabled = true;
     delete_tree_nodes(&Root_Node);
+    if (STATIC_ROOT_NODE != nullptr) {
+        delete STATIC_ROOT_NODE;
+        STATIC_ROOT_NODE = nullptr;
+    }
     PointVector().swap(PCL_Storage);
     Rebuild_Logger.clear();
 }
@@ -29,6 +33,10 @@ template <typename PointType> void KD_TREE<PointType>::release() {
     stop_thread();
     Delete_Storage_Disabled = true;
     delete_tree_nodes(&Root_Node);
+    if (STATIC_ROOT_NODE != nullptr) {
+        delete STATIC_ROOT_NODE;
+        STATIC_ROOT_NODE = nullptr;
+    }
     PointVector().swap(PCL_Storage);
     Rebuild_Logger.clear();
 }
@@ -346,6 +354,10 @@ void KD_TREE<PointType>::run_operation(KD_TREE_NODE **root, Operation_Logger_Typ
 template <typename PointType> void KD_TREE<PointType>::build(PointVector point_cloud) {
     if (Root_Node != nullptr) {
         delete_tree_nodes(&Root_Node);
+    }
+    if (STATIC_ROOT_NODE != nullptr) {
+        delete STATIC_ROOT_NODE;
+        STATIC_ROOT_NODE = nullptr;
     }
     if (point_cloud.size() == 0)
         return;

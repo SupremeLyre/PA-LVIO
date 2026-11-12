@@ -29,6 +29,9 @@ def generate_launch_description():
         name="lvio_node",
         output="screen",
         arguments=[LaunchConfiguration("configfile")],
+        parameters=[
+            {"is_read_bag": False},
+        ],
     )
 
     tf_world_map_node = Node(
