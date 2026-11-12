@@ -74,6 +74,8 @@ inline void publishRosMsg(PubT &pub, const MsgT &msg) {
 #include <builtin_interfaces/msg/time.hpp>
 #include <geometry_msgs/msg/point32.hpp>
 #include <geometry_msgs/msg/pose_stamped.hpp>
+#include <livox_ros_driver/msg/custom_msg.hpp>
+#include <livox_ros_driver/msg/custom_point.hpp>
 #include <livox_ros_driver2/msg/custom_msg.hpp>
 #include <livox_ros_driver2/msg/custom_point.hpp>
 #include <nav_msgs/msg/odometry.hpp>
@@ -99,9 +101,12 @@ using OdometryMsg               = nav_msgs::msg::Odometry;
 using PathMsg                   = nav_msgs::msg::Path;
 using Point32Msg                = geometry_msgs::msg::Point32;
 using PoseStampedMsg            = geometry_msgs::msg::PoseStamped;
-using LivoxCustomMsg            = livox_ros_driver2::msg::CustomMsg;
-using LivoxCustomMsgConstPtr    = livox_ros_driver2::msg::CustomMsg::ConstSharedPtr;
-using LivoxCustomPoint          = livox_ros_driver2::msg::CustomPoint;
+using LivoxCustomMsg            = livox_ros_driver::msg::CustomMsg;
+using LivoxCustomMsgConstPtr    = livox_ros_driver::msg::CustomMsg::ConstSharedPtr;
+using LivoxCustomPoint          = livox_ros_driver::msg::CustomPoint;
+using LivoxCustomMsg2           = livox_ros_driver2::msg::CustomMsg;
+using LivoxCustomMsg2ConstPtr   = livox_ros_driver2::msg::CustomMsg::ConstSharedPtr;
+using LivoxCustomPoint2         = livox_ros_driver2::msg::CustomPoint;
 
 template <typename StampT>
 inline double stampToSec(const StampT &stamp) {

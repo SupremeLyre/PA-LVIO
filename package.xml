@@ -36,6 +36,7 @@
     <depend condition="$ROS_VERSION == 2">tf2</depend>
     <depend condition="$ROS_VERSION == 2">tf2_ros</depend>
     <depend condition="$ROS_VERSION == 2">pcl_conversions</depend>
+    <depend condition="$ROS_VERSION == 2">livox_ros_driver</depend>
     <depend condition="$ROS_VERSION == 2">livox_ros_driver2</depend>
 
     <!-- System dependencies -->

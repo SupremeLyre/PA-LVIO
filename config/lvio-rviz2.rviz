@@ -1,6 +1,6 @@
 Panels:
   - Class: rviz_common/Displays
-    Help Height: 94
+    Help Height: 70
     Name: Displays
     Property Tree Widget:
       Expanded:
@@ -9,20 +9,17 @@ Panels:
         - /Visual1
         - /Lidar1
       Splitter Ratio: 0.6352941393852234
-    Tree Height: 1208
+    Tree Height: 70
   - Class: rviz_common/Views
     Expanded:
       - /Current View1
     Name: Views
     Splitter Ratio: 0.5
   - Class: rviz_common/Time
+    Experimental: false
     Name: Time
     SyncMode: 0
     SyncSource: ""
-Preferences:
-  PromptSaveOnExit: true
-Toolbars:
-  toolButtonStyle: 2
 Visualization Manager:
   Class: ""
   Displays:
@@ -69,6 +66,7 @@ Visualization Manager:
           Topic:
             Depth: 10
             Durability Policy: Volatile
+            Filter size: 10
             History Policy: Keep Last
             Reliability Policy: Reliable
             Value: /visual/path
@@ -107,6 +105,7 @@ Visualization Manager:
           Topic:
             Depth: 10
             Durability Policy: Volatile
+            Filter size: 10
             History Policy: Keep Last
             Reliability Policy: Reliable
             Value: /visual/pose
@@ -126,7 +125,9 @@ Visualization Manager:
           Enabled: true
           Invert Rainbow: false
           Max Color: 255; 255; 255
+          Max Intensity: 4096
           Min Color: 0; 0; 0
+          Min Intensity: 0
           Name: Current Points
           Position Transformer: XYZ
           Selectable: true
@@ -136,6 +137,7 @@ Visualization Manager:
           Topic:
             Depth: 10
             Durability Policy: Volatile
+            Filter size: 10
             History Policy: Keep Last
             Reliability Policy: Reliable
             Value: /visual/current
@@ -157,7 +159,9 @@ Visualization Manager:
           Enabled: true
           Invert Rainbow: false
           Max Color: 255; 255; 255
+          Max Intensity: 4096
           Min Color: 0; 0; 0
+          Min Intensity: 0
           Name: Fixed Points
           Position Transformer: XYZ
           Selectable: true
@@ -167,6 +171,7 @@ Visualization Manager:
           Topic:
             Depth: 10
             Durability Policy: Volatile
+            Filter size: 10
             History Policy: Keep Last
             Reliability Policy: Reliable
             Value: /visual/fixed
@@ -185,6 +190,7 @@ Visualization Manager:
             Durability Policy: Volatile
             History Policy: Keep Last
             Reliability Policy: Reliable
+            Transport Override: ""
             Value: /visual/tracking
           Value: true
         - Class: rviz_default_plugins/Image
@@ -199,6 +205,7 @@ Visualization Manager:
             Durability Policy: Volatile
             History Policy: Keep Last
             Reliability Policy: Reliable
+            Transport Override: ""
             Value: /visual/image
           Value: true
       Enabled: true
@@ -220,7 +227,9 @@ Visualization Manager:
           Enabled: true
           Invert Rainbow: false
           Max Color: 255; 255; 255
+          Max Intensity: 4096
           Min Color: 0; 0; 0
+          Min Intensity: 0
           Name: Current
           Position Transformer: XYZ
           Selectable: true
@@ -230,6 +239,7 @@ Visualization Manager:
           Topic:
             Depth: 10
             Durability Policy: Volatile
+            Filter size: 10
             History Policy: Keep Last
             Reliability Policy: Reliable
             Value: /lidar/current
@@ -251,7 +261,9 @@ Visualization Manager:
           Enabled: true
           Invert Rainbow: true
           Max Color: 255; 255; 255
+          Max Intensity: 4096
           Min Color: 0; 0; 0
+          Min Intensity: 0
           Name: Map
           Position Transformer: XYZ
           Selectable: true
@@ -261,6 +273,7 @@ Visualization Manager:
           Topic:
             Depth: 10
             Durability Policy: Volatile
+            Filter size: 10
             History Policy: Keep Last
             Reliability Policy: Reliable
             Value: /lidar/map
@@ -290,6 +303,7 @@ Visualization Manager:
           Topic:
             Depth: 10
             Durability Policy: Volatile
+            Filter size: 10
             History Policy: Keep Last
             Reliability Policy: Reliable
             Value: /lidar/path
@@ -309,7 +323,9 @@ Visualization Manager:
           Enabled: true
           Invert Rainbow: false
           Max Color: 255; 255; 255
+          Max Intensity: 4096
           Min Color: 0; 0; 0
+          Min Intensity: 0
           Name: Plane
           Position Transformer: XYZ
           Selectable: true
@@ -319,6 +335,7 @@ Visualization Manager:
           Topic:
             Depth: 10
             Durability Policy: Volatile
+            Filter size: 10
             History Policy: Keep Last
             Reliability Policy: Reliable
             Value: /lidar/plane
@@ -359,6 +376,7 @@ Visualization Manager:
           Topic:
             Depth: 10
             Durability Policy: Volatile
+            Filter size: 10
             History Policy: Keep Last
             Reliability Policy: Reliable
             Value: /lidar/pose
@@ -378,7 +396,9 @@ Visualization Manager:
           Enabled: true
           Invert Rainbow: false
           Max Color: 255; 255; 255
+          Max Intensity: 4096
           Min Color: 0; 0; 0
+          Min Intensity: 0
           Name: RGBMap
           Position Transformer: XYZ
           Selectable: true
@@ -388,6 +408,7 @@ Visualization Manager:
           Topic:
             Depth: 10
             Durability Policy: Volatile
+            Filter size: 10
             History Policy: Keep Last
             Reliability Policy: Reliable
             Value: /lidar/rgb_map
@@ -399,7 +420,6 @@ Visualization Manager:
   Enabled: true
   Global Options:
     Background Color: 0; 0; 0
-    Default Light: true
     Fixed Frame: map
     Frame Rate: 20
   Name: root
@@ -410,7 +430,11 @@ Visualization Manager:
     - Class: rviz_default_plugins/Select
     - Class: rviz_default_plugins/FocusCamera
     - Class: rviz_default_plugins/Measure
+      Line color: 128; 128; 0
     - Class: rviz_default_plugins/SetInitialPose
+      Covariance x: 0.25
+      Covariance y: 0.25
+      Covariance yaw: 0.06853891909122467
       Topic:
         Depth: 5
         Durability Policy: Volatile
@@ -432,6 +456,9 @@ Visualization Manager:
         History Policy: Keep Last
         Reliability Policy: Reliable
         Value: /clicked_point
+  Transformation:
+    Current:
+      Class: rviz_default_plugins/TF
   Value: true
   Views:
     Current:
@@ -442,7 +469,6 @@ Visualization Manager:
         Stereo Focal Distance: 1
         Swap Stereo Eyes: false
         Value: false
-      Field of View: 0.7853981852531433
       Focal Point:
         X: -0.19111062586307526
         Y: -0.5290209054946899
@@ -454,5 +480,24 @@ Visualization Manager:
       Near Clip Distance: 0.009999999776482582
       Pitch: 1.5697963237762451
       Target Frame: <Fixed Frame>
+      Value: Orbit (rviz_default_plugins)
       Yaw: 3.1295292377471924
     Saved: ~
+Window Geometry:
+  Displays:
+    collapsed: false
+  Height: 720
+  Hide Left Dock: false
+  Hide Right Dock: false
+  Image:
+    collapsed: false
+  QMainWindow State: 000000ff00000000fd00000003000000000000015600000228fc0200000003fb000000100054007200610063006b0069006e00670100000041000000a70000001900fffffffb0000000a0049006d00610067006501000000ee000000a50000001900fffffffb000000100044006900730070006c0061007900730100000199000000d0000000d000ffffff000000010000010000000228fc0200000001fb0000000a00560069006500770073010000004100000228000000af00ffffff000000030000050000000040fc0100000001fb0000000800540069006d00650100000000000005000000026a00ffffff0000029e0000022800000004000000040000000800000008fc0000000100000002000000010000000a0054006f006f006c00730100000000ffffffff0000000000000000
+  Time:
+    collapsed: false
+  Tracking:
+    collapsed: false
+  Views:
+    collapsed: false
+  Width: 1280
+  X: 336
+  Y: 218

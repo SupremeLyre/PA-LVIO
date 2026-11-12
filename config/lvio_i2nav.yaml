@@ -1,5 +1,5 @@
 # 结果输出路径
-outputpath: ""
+outputpath: "/media/supremelyre/nvme2/datasets/i2nav-robot/PA-LVIO/"
 is_make_outputdir: true
 
 # 是否开启可视化

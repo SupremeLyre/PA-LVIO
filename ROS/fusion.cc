@@ -286,11 +286,39 @@ void Fusion::processSubscribe(const string &imu_topic, const string &image_topic
 
     // Livox / PointCloud2 lidar
     rclcpp::Subscription<LivoxCustomMsg>::SharedPtr livox_sub;
+    rclcpp::GenericSubscription::SharedPtr livox_generic_sub;
+    rclcpp::TimerBase::SharedPtr livox_type_timer;
     rclcpp::Subscription<PointCloud2Msg>::SharedPtr pointcloud_sub;
     if (is_use_lidar_ || (is_use_visual_ && is_use_lidar_depth_)) {
         if (lidar_type_ == Livox) {
             livox_sub = node->create_subscription<LivoxCustomMsg>(
                 lidar_topic, 10, [this](const LivoxCustomMsgConstPtr msg) { livoxCallback(msg); });
+            livox_type_timer = node->create_wall_timer(
+                std::chrono::milliseconds(100),
+                [this, node, lidar_topic, &livox_sub, &livox_generic_sub, &livox_type_timer]() {
+                    const auto pubs = node->get_publishers_info_by_topic(lidar_topic);
+                    for (const auto &pub : pubs) {
+                        const auto &type = pub.topic_type();
+                        if (type == "livox_ros_driver/msg/CustomMsg") {
+                            livox_type_timer->cancel();
+                            return;
+                        }
+                        if (type == "livox_ros_driver2/msg/CustomMsg" ||
+                            type == "livox_interfaces/msg/CustomMsg") {
+                            livox_sub.reset();
+                            livox_generic_sub = node->create_generic_subscription(
+                                lidar_topic, type, 10,
+                                [this](std::shared_ptr<rclcpp::SerializedMessage> serialized) {
+                                    auto msg = std::make_shared<LivoxCustomMsg>();
+                                    rclcpp::Serialization<LivoxCustomMsg>().deserialize_message(
+                                        serialized.get(), msg.get());
+                                    livoxCallback(msg);
+                                });
+                            livox_type_timer->cancel();
+                            return;
+                        }
+                    }
+                });
         } else if ((lidar_type_ == Velodyne) || (lidar_type_ == Ouster) || (lidar_type_ == Hesai)) {
             pointcloud_sub = node->create_subscription<PointCloud2Msg>(
                 lidar_topic, 10, [this](const PointCloud2MsgConstPtr msg) { pointCloudCallback(msg); });

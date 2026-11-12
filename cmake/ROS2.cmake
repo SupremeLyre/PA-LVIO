@@ -14,6 +14,7 @@ find_package(geometry_msgs REQUIRED)
 find_package(tf2 REQUIRED)
 find_package(tf2_ros REQUIRED)
 find_package(pcl_conversions REQUIRED)
+find_package(livox_ros_driver REQUIRED)
 find_package(livox_ros_driver2 REQUIRED)
 
 add_definitions(-DROS_AVAILABLE=2)
@@ -35,6 +36,7 @@ set(ament_libraries
     tf2
     tf2_ros
     pcl_conversions
+    livox_ros_driver
     livox_ros_driver2
 )
 
